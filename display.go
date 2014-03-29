@@ -4,6 +4,7 @@ import (
 	"math"
 	"fmt"
 	"os"
+	"runtime"
 	"github.com/go-gl/gl"
 	//"github.com/go-gl/glh"
 	"github.com/jackyb/go-sdl2/sdl"
@@ -19,6 +20,7 @@ type Display struct {
 }
 
 func new_display() Display {
+	runtime.LockOSThread()
 	var winTitle string = "Go-SDL2 + Go-GL"
 	var winWidth, winHeight int = 800, 600
 	var this Display
@@ -39,6 +41,8 @@ func new_display() Display {
 		panic(sdl.GetError())
 	}
 
+	gl.Init()
+
 	gl.Enable(gl.DEPTH_TEST)
 	gl.ClearColor(0.2, 0.2, 0.3, 1.0)
 	gl.ClearDepth(1)
@@ -46,7 +50,8 @@ func new_display() Display {
 	gl.Viewport(0, 0, winWidth, winHeight)
 
 	this.planet = gen_sphere(0.5, 6, 6);
-	//this.prog = gen_program(vShaderSrc, fShaderSrc);
+	this.prog = gen_program(vShaderSrc, fShaderSrc);
+	runtime.UnlockOSThread()
 	return this
 }
 
@@ -71,6 +76,7 @@ gl_FragColor = vec4(1,0,0,1);
 }`
 
 func (this Display) update() {
+	runtime.LockOSThread()
 	drawgl()
 	this.planet.draw(0,0,0);
 	sdl.GL_SwapWindow(this.window)
@@ -83,8 +89,9 @@ func (this Display) shutdown() {
 }
 
 func drawgl() {
+	runtime.LockOSThread()
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-	//gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
+	gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
 	//gl.ShadeModel(gl.FLAT)
 
 /*
@@ -105,7 +112,6 @@ type ds_program struct {
 }
 
 func compile_shader(shader *gl.Shader, src string) {
-	
 	shader.Source(src)
 	shader.Compile()
 
@@ -135,6 +141,8 @@ func gen_program(vSrc, fSrc string) *ds_program {
 		fmt.Println("Program link err:", status, infoLog)
 		os.Exit(1)
 	}
+
+	program.Use()
 
 	var this ds_program
 	this.program = program
@@ -185,11 +193,9 @@ func gen_sphere(radius float64, rings uint, sectors uint) *ds_sphere {
 		}
 	}
 
-	/*
 	sp.vBuffer = gl.GenBuffer()
 	sp.vBuffer.Bind(gl.ARRAY_BUFFER)
-	gl.BufferData(gl.ARRAY_BUFFER, len(sp.indices) * 8, sp.indices, gl.STATIC_DRAW)
-	*/
+	gl.BufferData(gl.ARRAY_BUFFER, len(sp.vertices) * 8, sp.vertices, gl.STATIC_DRAW)
 
 	return sp
 }
@@ -199,11 +205,12 @@ func (this ds_sphere) draw(x float64, y float64, z float64) {
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.Translated(x, y, z)
 
+	gl.DrawArrays(gl.TRIANGLES, 0, len(this.vertices));
+
 /*
 	gl.EnableClientState(gl.VERTEX_ARRAY);
 	gl.EnableClientState(gl.NORMAL_ARRAY);
 	gl.EnableClientState(gl.TEXTURE_COORD_ARRAY);
-	*/
 
 	gl.Begin(gl.TRIANGLES);
 	for i := 0; i < len(this.vertices); i += 3 {
@@ -211,5 +218,6 @@ func (this ds_sphere) draw(x float64, y float64, z float64) {
 		gl.Vertex3d(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2])
 	}
 	gl.End();
+	*/
 	gl.PopMatrix()
 }

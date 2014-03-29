@@ -1,5 +1,8 @@
 package main
 
+import (
+)
+
 func main() {
 	display := new_display()
 	state := new_state()
